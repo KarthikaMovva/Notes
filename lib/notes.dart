@@ -1,22 +1,31 @@
-import 'package:flutter/foundation.dart';
-
 class Note {
-  int? id;
-  String body;
+  final int id; 
+  final String body;
+  final String userId; 
+  final DateTime createdAt;
 
-  Note({this.id, required this.body});
+  Note({
+    required this.id,
+    required this.body,
+    required this.userId,
+    required this.createdAt,
+  });
 
-  factory Note.fromMap(Map<String, dynamic> map) {
+  factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
-      id:map['id'] as int?,  
-      body:map['body'] as String,
+      id: (json['id'] as num).toInt(),  
+      body: json['body'] ?? '',          
+      userId: json['user_id'] as String, 
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 
-  Map<String,dynamic> toMap(){
+  Map<String, dynamic> toJson() {
     return {
-      'id':id,  
-      'body':body,
+      'id': id,  
+      'body': body,
+      'user_id': userId, 
+      'created_at': createdAt.toIso8601String(),
     };
   }
 }

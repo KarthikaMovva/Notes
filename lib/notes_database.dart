@@ -4,29 +4,77 @@ import 'package:note/notes.dart';
 class NotesDatabase {
   final db = Supabase.instance.client.from('notes');
 
-  Future<void> addNote(Note addedNote) async {
+  Future<void> addNote(String newNote) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+
+    if (userId == null) {
+      print("User not logged in");
+      return;
+    }
+
     try {
-      await db.insert({
-        'body': addedNote.body, 
+      final response = await db.insert({
+        'user_id': userId,
+        'body': newNote,
       });
-      print("Note added successfully");
-    } catch (e) {
-      print("Error deleting note: $e");
+
+      print("Note added successfully: $response");
+    } catch (error) {
+      print("Error adding note: $error");
     }
   }
 
-    final readnote = Supabase.instance.client.from('notes').stream(primaryKey: [
-      'id'
-    ]).map((data) => data.map((x) => Note.fromMap(x)).toList());
-
-    Future modified(Note prevNote, String Newnote) async {
-      await db.update({
-        'body': Newnote,
-      }).eq('id', prevNote.id!);
+  Stream<List<Note>> readnote() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      print("User not logged in, returning empty stream");
+      return const Stream.empty();
     }
 
-    Future deleted(Note note) async {
-      await db.delete().eq('id', note.id!);
+    return db
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .map((data) {
+      print("Fetched Notes: $data");
+      return data.map((note) => Note.fromJson(note)).toList();
+    });
+  }
+
+  Future<void> modified(Note prevNote, String newNote) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+
+    if (userId == null) {
+      print("User not logged in");
+      return;
+    }
+
+    try {
+      await db
+          .update({'body': newNote})
+          .eq('id', prevNote.id)
+          .eq('user_id', userId);
+
+      print("Note updated successfully!");
+    } catch (error) {
+      print("Error updating note: $error");
     }
   }
 
+  Future<void> deleted(Note note) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+
+    if (userId == null) {
+      print("User not logged in");
+      return;
+    }
+
+    try {
+      await db.delete().eq('id', note.id).eq('user_id', userId);
+
+      print("Note deleted successfully!");
+    } catch (error) {
+      print("Error deleting note: $error");
+    }
+  }
+}
